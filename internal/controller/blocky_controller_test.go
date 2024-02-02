@@ -131,21 +131,26 @@ var _ = Describe("Blocky controller", func() {
 
 			By("Checking the latest Status Condition added to the Blocky instance")
 			Eventually(func() error {
-				if blocky.Status.Conditions != nil &&
-					len(blocky.Status.Conditions) != 0 {
-					latestStatusCondition := blocky.Status.Conditions[len(blocky.Status.Conditions)-1]
-					expectedLatestStatusCondition := metav1.Condition{
-						Type:   typeAvailableBlocky,
-						Status: metav1.ConditionTrue,
-						Reason: "Reconciling",
-						Message: fmt.Sprintf(
-							"Deployment for custom resource (%s) with %d replicas created successfully",
-							blocky.Name,
-							blocky.Spec.Size),
-					}
-					if latestStatusCondition != expectedLatestStatusCondition {
-						return fmt.Errorf("The latest status condition added to the Blocky instance is not as expected")
-					}
+				if blocky.Status.Conditions == nil {
+					return nil
+				}
+
+				if len(blocky.Status.Conditions) == 0 {
+					return nil
+				}
+
+				latestStatusCondition := blocky.Status.Conditions[len(blocky.Status.Conditions)-1]
+				expectedLatestStatusCondition := metav1.Condition{
+					Type:   typeAvailableBlocky,
+					Status: metav1.ConditionTrue,
+					Reason: "Reconciling",
+					Message: fmt.Sprintf(
+						"Deployment for custom resource (%s) with %d replicas created successfully",
+						blocky.Name,
+						blocky.Spec.Size),
+				}
+				if latestStatusCondition != expectedLatestStatusCondition {
+					return fmt.Errorf("The latest status condition added to the Blocky instance is not as expected")
 				}
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())

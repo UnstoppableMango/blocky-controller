@@ -82,7 +82,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	logger := log.FromContext(ctx)
 
 	// Fetch the Blocky instance
-	// The purpose is check if the Custom Resource for the Kind Blocky
+	// The purpose is to check if the Custom Resource for the Kind Blocky
 	// is applied on the cluster if not we return nil to stop the reconciliation
 	blocky := &appsv1alpha1.Blocky{}
 	err := r.Get(ctx, req.NamespacedName, blocky)
