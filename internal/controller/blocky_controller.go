@@ -79,7 +79,7 @@ type BlockyReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	// Fetch the Blocky instance
 	// The purpose is check if the Custom Resource for the Kind Blocky
@@ -90,11 +90,11 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if apierrors.IsNotFound(err) {
 			// If the custom resource is not found then, it usually means that it was deleted or not created
 			// In this way, we will stop the reconciliation
-			log.Info("blocky resource not found. Ignoring since object must be deleted")
+			logger.Info("blocky resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get blocky")
+		logger.Error(err, "Failed to get blocky")
 		return ctrl.Result{}, err
 	}
 
@@ -102,7 +102,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if blocky.Status.Conditions == nil || len(blocky.Status.Conditions) == 0 {
 		meta.SetStatusCondition(&blocky.Status.Conditions, metav1.Condition{Type: typeAvailableBlocky, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err = r.Status().Update(ctx, blocky); err != nil {
-			log.Error(err, "Failed to update Blocky status")
+			logger.Error(err, "Failed to update Blocky status")
 			return ctrl.Result{}, err
 		}
 
@@ -112,7 +112,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		// your changes to the latest version and try again" which would re-trigger the reconciliation
 		// if we try to update it again in the following operations
 		if err := r.Get(ctx, req.NamespacedName, blocky); err != nil {
-			log.Error(err, "Failed to re-fetch blocky")
+			logger.Error(err, "Failed to re-fetch blocky")
 			return ctrl.Result{}, err
 		}
 	}
@@ -121,14 +121,14 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// occurs before the custom resource to be deleted.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if !controllerutil.ContainsFinalizer(blocky, blockyFinalizer) {
-		log.Info("Adding Finalizer for Blocky")
+		logger.Info("Adding Finalizer for Blocky")
 		if ok := controllerutil.AddFinalizer(blocky, blockyFinalizer); !ok {
-			log.Error(err, "Failed to add finalizer into the custom resource")
+			logger.Error(err, "Failed to add finalizer into the custom resource")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		if err = r.Update(ctx, blocky); err != nil {
-			log.Error(err, "Failed to update custom resource to add finalizer")
+			logger.Error(err, "Failed to update custom resource to add finalizer")
 			return ctrl.Result{}, err
 		}
 	}
@@ -138,7 +138,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	isBlockyMarkedToBeDeleted := blocky.GetDeletionTimestamp() != nil
 	if isBlockyMarkedToBeDeleted {
 		if controllerutil.ContainsFinalizer(blocky, blockyFinalizer) {
-			log.Info("Performing Finalizer Operations for Blocky before delete CR")
+			logger.Info("Performing Finalizer Operations for Blocky before delete CR")
 
 			// Let's add here an status "Downgrade" to define that this resource begin its process to be terminated.
 			meta.SetStatusCondition(&blocky.Status.Conditions, metav1.Condition{Type: typeDegradedBlocky,
@@ -146,7 +146,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", blocky.Name)})
 
 			if err := r.Status().Update(ctx, blocky); err != nil {
-				log.Error(err, "Failed to update Blocky status")
+				logger.Error(err, "Failed to update Blocky status")
 				return ctrl.Result{}, err
 			}
 
@@ -163,7 +163,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			// raise the issue "the object has been modified, please apply
 			// your changes to the latest version and try again" which would re-trigger the reconciliation
 			if err := r.Get(ctx, req.NamespacedName, blocky); err != nil {
-				log.Error(err, "Failed to re-fetch blocky")
+				logger.Error(err, "Failed to re-fetch blocky")
 				return ctrl.Result{}, err
 			}
 
@@ -172,18 +172,18 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", blocky.Name)})
 
 			if err := r.Status().Update(ctx, blocky); err != nil {
-				log.Error(err, "Failed to update Blocky status")
+				logger.Error(err, "Failed to update Blocky status")
 				return ctrl.Result{}, err
 			}
 
-			log.Info("Removing Finalizer for Blocky after successfully perform the operations")
+			logger.Info("Removing Finalizer for Blocky after successfully perform the operations")
 			if ok := controllerutil.RemoveFinalizer(blocky, blockyFinalizer); !ok {
-				log.Error(err, "Failed to remove finalizer for Blocky")
+				logger.Error(err, "Failed to remove finalizer for Blocky")
 				return ctrl.Result{Requeue: true}, nil
 			}
 
 			if err := r.Update(ctx, blocky); err != nil {
-				log.Error(err, "Failed to remove finalizer for Blocky")
+				logger.Error(err, "Failed to remove finalizer for Blocky")
 				return ctrl.Result{}, err
 			}
 		}
@@ -197,7 +197,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		// Define a new deployment
 		dep, err := r.deploymentForBlocky(blocky)
 		if err != nil {
-			log.Error(err, "Failed to define new Deployment resource for Blocky")
+			logger.Error(err, "Failed to define new Deployment resource for Blocky")
 
 			// The following implementation will update the status
 			meta.SetStatusCondition(&blocky.Status.Conditions, metav1.Condition{Type: typeAvailableBlocky,
@@ -205,17 +205,17 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", blocky.Name, err)})
 
 			if err := r.Status().Update(ctx, blocky); err != nil {
-				log.Error(err, "Failed to update Blocky status")
+				logger.Error(err, "Failed to update Blocky status")
 				return ctrl.Result{}, err
 			}
 
 			return ctrl.Result{}, err
 		}
 
-		log.Info("Creating a new Deployment",
+		logger.Info("Creating a new Deployment",
 			"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		if err = r.Create(ctx, dep); err != nil {
-			log.Error(err, "Failed to create new Deployment",
+			logger.Error(err, "Failed to create new Deployment",
 				"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 			return ctrl.Result{}, err
 		}
@@ -225,7 +225,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		// and move forward for the next operations
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if err != nil {
-		log.Error(err, "Failed to get Deployment")
+		logger.Error(err, "Failed to get Deployment")
 		// Let's return the error for the reconciliation be re-trigged again
 		return ctrl.Result{}, err
 	}
@@ -238,7 +238,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if *found.Spec.Replicas != size {
 		found.Spec.Replicas = &size
 		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update Deployment",
+			logger.Error(err, "Failed to update Deployment",
 				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
 			// Re-fetch the blocky Custom Resource before update the status
@@ -246,7 +246,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			// raise the issue "the object has been modified, please apply
 			// your changes to the latest version and try again" which would re-trigger the reconciliation
 			if err := r.Get(ctx, req.NamespacedName, blocky); err != nil {
-				log.Error(err, "Failed to re-fetch blocky")
+				logger.Error(err, "Failed to re-fetch blocky")
 				return ctrl.Result{}, err
 			}
 
@@ -256,7 +256,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", blocky.Name, err)})
 
 			if err := r.Status().Update(ctx, blocky); err != nil {
-				log.Error(err, "Failed to update Blocky status")
+				logger.Error(err, "Failed to update Blocky status")
 				return ctrl.Result{}, err
 			}
 
@@ -275,7 +275,7 @@ func (r *BlockyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", blocky.Name, size)})
 
 	if err := r.Status().Update(ctx, blocky); err != nil {
-		log.Error(err, "Failed to update Blocky status")
+		logger.Error(err, "Failed to update Blocky status")
 		return ctrl.Result{}, err
 	}
 
