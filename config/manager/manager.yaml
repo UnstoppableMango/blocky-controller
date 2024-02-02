@@ -72,6 +72,9 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
+        env:
+        - name: BLOCKY_IMAGE
+          value: spx01/blocky:v0.23
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

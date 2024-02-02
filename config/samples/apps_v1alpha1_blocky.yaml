@@ -1,0 +1,11 @@
+apiVersion: apps.blocky.unmango.net/v1alpha1
+kind: Blocky
+metadata:
+  name: blocky-sample
+spec:
+  # TODO(user): edit the following value to ensure the number
+  # of Pods/Instances your Operand must have on cluster
+  size: 1
+
+  # TODO(user): edit the following value to ensure the container has the right port to be initialized
+  containerPort: 53

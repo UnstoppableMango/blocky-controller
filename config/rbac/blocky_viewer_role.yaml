@@ -1,0 +1,27 @@
+# permissions for end users to view blockies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: blocky-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: blocky-controller
+    app.kubernetes.io/part-of: blocky-controller
+    app.kubernetes.io/managed-by: kustomize
+  name: blocky-viewer-role
+rules:
+- apiGroups:
+  - apps.blocky.unmango.net
+  resources:
+  - blockies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.blocky.unmango.net
+  resources:
+  - blockies/status
+  verbs:
+  - get
